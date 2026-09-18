@@ -3,407 +3,1087 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>벽돌깨기 게임</title>
+    <title>오메추 한입만 - 개인화 맞춤형 메뉴 큐레이션</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316', // Primary Orange/Coral
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        },
+                        secondary: '#4f46e5',
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            background-color: #1a1a2e;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #fafafa;
         }
-
-        h1 {
-            margin-bottom: 15px;
-            color: #e94560;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        .step-active {
+            border-color: #f97316;
+            background-color: #fff7ed;
+            color: #ea580c;
         }
-
-        #game-container {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .chip-selected {
+            background-color: #f97316 !important;
+            color: white !important;
+            border-color: #ea580c !important;
         }
-
-        canvas {
-            background-color: #0f3460;
-            border: 4px solid #16213e;
-            border-radius: 8px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-            cursor: none; /* 마우스 커서 숨김 (패들과 겹치므로) */
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
-
-        #start-btn {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 15px 35px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #ffffff;
-            background: linear-gradient(45deg, #e94560, #0f3460);
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
-            transition: all 0.3s ease;
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
-
-        #start-btn:hover {
-            transform: translate(-50%, -50%) scale(1.05);
-            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.6);
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
         }
-
-        .info-panel {
-            margin-top: 15px;
-            font-size: 16px;
-            color: #8d99ae;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Spinner & Wheel Animation */
+        @keyframes pulse-slow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 2s infinite ease-in-out;
         }
     </style>
 </head>
-<body>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col justify-between">
 
-    <h1>벽돌깨기 게임</h1>
-    
-    <div id="game-container">
-        <canvas id="gameCanvas" width="600" height="700"></canvas>
-        <button id="start-btn">게임 시작</button>
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="resetToStep(1)">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-500 to-amber-400 flex items-center justify-center text-white text-xl shadow-md shadow-brand-500/20">
+                    <i class="fa-solid to-utensils fa-utensils"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-xl tracking-tight leading-none text-gray-900">
+                        오메추 <span class="text-brand-500">한입만</span>
+                    </h1>
+                    <p class="text-[10px] text-gray-400 font-medium">개인 맞춤 메뉴 큐레이션</p>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center space-x-2">
+                <button onclick="toggleHistoryDrawer()" class="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center space-x-1">
+                    <i class="fa-solid fa-clock-rotate-left text-brand-500"></i>
+                    <span class="hidden sm:inline">내 입맛 분석</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mode Toggle Tabs -->
+        <div class="bg-gray-100 p-1 max-w-4xl mx-auto my-1 rounded-xl flex text-xs font-bold text-gray-500">
+            <button id="mode-personal-btn" onclick="switchMode('personal')" class="flex-1 py-2 rounded-lg text-center transition bg-white text-brand-600 shadow-sm flex items-center justify-center space-x-1">
+                <i class="fa-solid fa-user"></i>
+                <span>개인용 (나혼자 고민)</span>
+            </button>
+            <button id="mode-group-btn" onclick="switchMode('group')" class="flex-1 py-2 rounded-lg text-center transition hover:text-gray-800 flex items-center justify-center space-x-1">
+                <i class="fa-solid fa-users"></i>
+                <span>다인용 (여럿이 조율)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-4xl mx-auto px-4 py-4 flex-grow w-full">
+
+        <!-- PERSONAL MODE CONTAINER -->
+        <div id="personal-mode-container">
+            <!-- Stepper Indicator -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center text-xs font-bold text-gray-400 mb-2 px-1">
+                    <span id="step-label-1" class="text-brand-500">1. 상황&포만감</span>
+                    <span id="step-label-2">2. 예산&유형</span>
+                    <span id="step-label-3">3. 취향&조건</span>
+                    <span id="step-label-4">4. AI 분석</span>
+                    <span id="step-label-5">5. 최종 결정</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div id="step-progress-bar" class="bg-brand-500 h-2 rounded-full transition-all duration-300 w-1/5"></div>
+                </div>
+            </div>
+
+            <!-- STEP 1: Current Status & Hunger level -->
+            <div id="step-1" class="step-card bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-brand-50 text-brand-600 rounded-full text-xs font-bold mb-2">STEP 1</span>
+                    <h2 class="text-xl font-bold text-gray-900">지금 어떤 상황이신가요?</h2>
+                    <p class="text-xs text-gray-500 mt-1">식사 시간 여유와 현재의 허기짐 상태를 알려주세요.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Meal Timing & Urgency -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">현재 식사 시간대 & 여유도</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <button type="button" onclick="selectTiming('breakfast', this)" class="timing-chip border border-gray-200 rounded-2xl p-3 text-left hover:border-brand-300 transition">
+                                <div class="text-lg mb-1">🌅</div>
+                                <div class="font-bold text-xs text-gray-800">아침 / 아점</div>
+                                <div class="text-[10px] text-gray-400">부담 없는 시작</div>
+                            </button>
+                            <button type="button" onclick="selectTiming('lunch', this)" class="timing-chip border border-brand-500 bg-brand-50 text-brand-600 rounded-2xl p-3 text-left transition">
+                                <div class="text-lg mb-1">☀️</div>
+                                <div class="font-bold text-xs text-gray-800">점심 식사</div>
+                                <div class="text-[10px] text-gray-400">든든한 에너징</div>
+                            </button>
+                            <button type="button" onclick="selectTiming('dinner', this)" class="timing-chip border border-gray-200 rounded-2xl p-3 text-left hover:border-brand-300 transition">
+                                <div class="text-lg mb-1">🌙</div>
+                                <div class="font-bold text-xs text-gray-800">저녁 식사</div>
+                                <div class="text-[10px] text-gray-400">하루의 마감</div>
+                            </button>
+                            <button type="button" onclick="selectTiming('snack', this)" class="timing-chip border border-gray-200 rounded-2xl p-3 text-left hover:border-brand-300 transition">
+                                <div class="text-lg mb-1">🍺</div>
+                                <div class="font-bold text-xs text-gray-800">야식 / 안주</div>
+                                <div class="text-[10px] text-gray-400">특별한 보상</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hunger / Fullness Level (1 to 5) -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-gray-700">현재 배고픔 / 포만감 상태</label>
+                            <span id="hunger-display-text" class="text-xs font-bold text-brand-600">3단계 : 출출해요 (딱 보통!)</span>
+                        </div>
+                        <input type="range" id="hunger-slider" min="1" max="5" value="3" oninput="updateHungerDisplay(this.value)" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                        <div class="flex justify-between text-[11px] text-gray-400 mt-2">
+                            <span>1단계 (속 편함)</span>
+                            <span>2단계 (입심심)</span>
+                            <span>3단계 (출출함)</span>
+                            <span>4단계 (배고픔)</span>
+                            <span>5단계 (꼬르륵 픽어살)</span>
+                        </div>
+                    </div>
+
+                    <!-- Meal Speed / Duration -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">식사 여유 시간</label>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                            <button type="button" onclick="selectSpeed('quick', this)" class="speed-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 font-medium">
+                                ⚡️ 15분 컷 (초스피드)
+                            </button>
+                            <button type="button" onclick="selectSpeed('normal', this)" class="speed-chip p-3 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold">
+                                🥣 30분~1시간 (일반적)
+                            </button>
+                            <button type="button" onclick="selectSpeed('relax', this)" class="speed-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 font-medium">
+                                🍷 여유로운 천천히
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="goToStep(2)" class="w-full mt-8 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-500/30 transition flex items-center justify-center space-x-2">
+                    <span>다음: 예산 및 식사 유형</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- STEP 2: Budget & Meal Type -->
+            <div id="step-2" class="step-card bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hidden">
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-brand-50 text-brand-600 rounded-full text-xs font-bold mb-2">STEP 2</span>
+                    <h2 class="text-xl font-bold text-gray-900">식사 조건 & 예산 설정</h2>
+                    <p class="text-xs text-gray-500 mt-1">오늘 생각하신 1인당 식사 예산과 드시는 방식을 선택해주세요.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Budget Selection -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">1인당 예상 예산</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            <button type="button" onclick="selectBudget('10000', this)" class="budget-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 text-left">
+                                <div class="text-gray-400 font-normal">가성비</div>
+                                <div class="font-bold text-gray-800 text-sm mt-0.5">1만원 미만</div>
+                            </button>
+                            <button type="button" onclick="selectBudget('15000', this)" class="budget-chip p-3 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold text-left">
+                                <div class="text-brand-400 font-normal">무난함</div>
+                                <div class="font-bold text-gray-800 text-sm mt-0.5">1만~1.5만원</div>
+                            </button>
+                            <button type="button" onclick="selectBudget('20000', this)" class="budget-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 text-left">
+                                <div class="text-gray-400 font-normal">든든하게</div>
+                                <div class="font-bold text-gray-800 text-sm mt-0.5">1.5만~2만원</div>
+                            </button>
+                            <button type="button" onclick="selectBudget('free', this)" class="budget-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 text-left">
+                                <div class="text-gray-400 font-normal">플렉스</div>
+                                <div class="font-bold text-gray-800 text-sm mt-0.5">상관없음 ✨</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Meal Type / Logistics -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">어떻게 드시나요?</label>
+                        <div class="grid grid-cols-3 gap-3 text-xs">
+                            <button type="button" onclick="selectMealType('dining', this)" class="type-chip p-4 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold text-center">
+                                <div class="text-2xl mb-1">🏬</div>
+                                <div>매장 방문 (외식)</div>
+                            </button>
+                            <button type="button" onclick="selectMealType('delivery', this)" class="type-chip p-4 rounded-2xl border border-gray-200 hover:border-brand-300 text-center">
+                                <div class="text-2xl mb-1">🛵</div>
+                                <div>배달 서비스</div>
+                            </button>
+                            <button type="button" onclick="selectMealType('convenience', this)" class="type-chip p-4 rounded-2xl border border-gray-200 hover:border-brand-300 text-center">
+                                <div class="text-2xl mb-1">🏃‍♂️</div>
+                                <div>포장 / 간단편의</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-8">
+                    <button onclick="goToStep(1)" class="w-1/3 py-3.5 border border-gray-200 hover:bg-gray-50 font-bold rounded-2xl transition text-gray-600 text-xs">
+                        이전 단계
+                    </button>
+                    <button onclick="goToStep(3)" class="w-2/3 py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-500/30 transition text-xs flex items-center justify-center space-x-2">
+                        <span>다음: 입맛 취향 & 히스토리</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Preferences, History & Weather -->
+            <div id="step-3" class="step-card bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hidden">
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-brand-50 text-brand-600 rounded-full text-xs font-bold mb-2">STEP 3</span>
+                    <h2 class="text-xl font-bold text-gray-900">개인 취향 & 최근 히스토리</h2>
+                    <p class="text-xs text-gray-500 mt-1">오늘 끌리는 맛과 제외할 메뉴, 알레르기를 입력해 완성도를 높입니다.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Weather Context -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">오늘 날씨/분위기</label>
+                        <div class="grid grid-cols-4 gap-2 text-xs">
+                            <button type="button" onclick="selectWeather('sunny', this)" class="weather-chip p-2.5 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold text-center">
+                                ☀️ 맑음/화창
+                            </button>
+                            <button type="button" onclick="selectWeather('rainy', this)" class="weather-chip p-2.5 rounded-2xl border border-gray-200 hover:border-brand-300 text-center">
+                                🌧️ 비/흐림
+                            </button>
+                            <button type="button" onclick="selectWeather('cold', this)" class="weather-chip p-2.5 rounded-2xl border border-gray-200 hover:border-brand-300 text-center">
+                                ❄️ 쌀쌀/추움
+                            </button>
+                            <button type="button" onclick="selectWeather('hot', this)" class="weather-chip p-2.5 rounded-2xl border border-gray-200 hover:border-brand-300 text-center">
+                                🔥 덥고 무더움
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Craving Mood Tags -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">오늘 땡기는 느낌 (중복 선택 가능)</label>
+                        <p class="text-[11px] text-gray-400 mb-2">클릭하여 활성화해주세요.</p>
+                        <div class="flex flex-wrap gap-2 text-xs" id="craving-tags-container">
+                            <!-- Dynamic Tag Toggles -->
+                        </div>
+                    </div>
+
+                    <!-- Recently Eaten Meals Avoidance -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">최근에 이미 먹은 음식 (추천 제외)</label>
+                        <input type="text" id="recent-meals-input" placeholder="예: 김치찌개, 돈까스, 짜장면 (쉼표 구분)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+
+                    <!-- Allergy / Dislike Filter -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">못 먹는 음식 / 알레르기</label>
+                        <div class="flex flex-wrap gap-2 text-xs mb-2" id="dislike-tags-container">
+                            <!-- Toggle Dislikes -->
+                        </div>
+                        <input type="text" id="dislike-custom-input" placeholder="기타 못 먹는 재료나 기피 메뉴 직접 입력" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 mt-8">
+                    <button onclick="goToStep(2)" class="w-1/3 py-3.5 border border-gray-200 hover:bg-gray-50 font-bold rounded-2xl transition text-gray-600 text-xs">
+                        이전 단계
+                    </button>
+                    <button onclick="startAiAnalysis()" class="w-2/3 py-3.5 bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 text-white font-bold rounded-2xl shadow-lg shadow-brand-500/30 transition text-xs flex items-center justify-center space-x-2">
+                        <span>✨ AI 딥러닝 추천 받기</span>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 4: AI Deep Learning Analysis Loading Screen -->
+            <div id="step-4" class="step-card bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hidden text-center py-16">
+                <div class="relative w-24 h-24 mx-auto mb-6">
+                    <div class="absolute inset-0 rounded-full border-4 border-brand-200 border-t-brand-500 animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-3xl animate-pulse-slow">
+                        🤖
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-extrabold text-gray-900 mb-2">AI 딥러닝 맞춤 분석 진행 중...</h3>
+                <p id="ai-status-text" class="text-xs text-brand-600 font-medium h-4">사용자 상태 및 기후 데이터 계산 중...</p>
+
+                <div class="max-w-xs mx-auto mt-6 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                    <div id="ai-progress-inner" class="bg-brand-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+
+                <div class="mt-8 text-[11px] text-gray-400 bg-gray-50 p-4 rounded-2xl text-left max-w-sm mx-auto border border-gray-100">
+                    <p class="font-bold text-gray-600 mb-1"><i class="fa-solid fa-microchip text-brand-500 mr-1"></i> 분석 매개변수:</p>
+                    <ul class="space-y-1 list-disc list-inside text-gray-500">
+                        <li>입력 상황: <span id="summary-timing-text" class="font-medium text-gray-700">점심</span></li>
+                        <li>예산 및 유형: <span id="summary-budget-text" class="font-medium text-gray-700">1~1.5만원</span></li>
+                        <li>선호 맛 태그: <span id="summary-craving-text" class="font-medium text-gray-700">국물, 매콤</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- STEP 5: Recommendation Results & Final Pick -->
+            <div id="step-5" class="step-card bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hidden">
+                <div class="mb-4 flex justify-between items-start">
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-brand-50 text-brand-600 rounded-full text-xs font-bold mb-1">RECOMMENDATION</span>
+                        <h2 class="text-xl font-bold text-gray-900">오늘의 찰떡 맞춤 추천 메뉴</h2>
+                        <p class="text-xs text-gray-500 mt-0.5">입력하신 조건과 알고리즘이 도출한 TOP 3 메뉴입니다.</p>
+                    </div>
+                    <button onclick="resetToStep(1)" class="text-xs text-brand-600 font-semibold hover:underline flex items-center space-x-1">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>다시 검사</span>
+                    </button>
+                </div>
+
+                <!-- Recommendation List Container -->
+                <div id="recommendation-list" class="space-y-4 mb-6">
+                    <!-- Cards will be populated dynamically -->
+                </div>
+
+                <!-- Selected Dish Action Section (Appears after choosing a dish) -->
+                <div id="action-section" class="border-t border-gray-100 pt-6 hidden">
+                    <div class="bg-brand-50 border border-brand-200 rounded-3xl p-5 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div id="selected-dish-emoji" class="text-3xl">🍲</div>
+                                <div>
+                                    <div class="text-[10px] font-bold text-brand-600 tracking-wider">최종 결정된 메뉴</div>
+                                    <h3 id="selected-dish-title" class="text-lg font-extrabold text-gray-900">김치찌개</h3>
+                                </div>
+                            </div>
+                            <span id="selected-dish-tag" class="px-2.5 py-1 bg-brand-500 text-white font-bold rounded-lg text-xs">매칭 98%</span>
+                        </div>
+
+                        <!-- Quick Map & Delivery Link Buttons -->
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <a id="link-naver-map" target="_blank" href="#" class="p-3 bg-white hover:bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-center space-x-2 text-emerald-700 font-bold text-xs transition shadow-sm">
+                                <span>🟢 네이버 지도 검색</span>
+                            </a>
+                            <a id="link-kakao-map" target="_blank" href="#" class="p-3 bg-white hover:bg-yellow-50 border border-yellow-300 rounded-2xl flex items-center justify-center space-x-2 text-yellow-800 font-bold text-xs transition shadow-sm">
+                                <span>🟡 카카오맵 검색</span>
+                            </a>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 mt-2 text-[11px]">
+                            <a id="link-baemin" target="_blank" href="#" class="py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-center font-bold transition">
+                                배달의민족
+                            </a>
+                            <a id="link-yogiyo" target="_blank" href="#" class="py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-center font-bold transition">
+                                요기요
+                            </a>
+                            <a id="link-coupang" target="_blank" href="#" class="py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-center font-bold transition">
+                                쿠팡이츠
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Feedback & Save to History -->
+                    <div class="bg-gray-50 p-4 rounded-2xl text-center">
+                        <p class="text-xs font-bold text-gray-700 mb-2">이 메뉴 선택에 만족하셨나요?</p>
+                        <div class="flex justify-center space-x-2 mb-3">
+                            <button onclick="saveFeedback(5)" class="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs hover:bg-brand-50 hover:border-brand-300 transition">😍 최고예요</button>
+                            <button onclick="saveFeedback(3)" class="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs hover:bg-brand-50 hover:border-brand-300 transition">🙂 무난해요</button>
+                            <button onclick="saveFeedback(1)" class="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs hover:bg-brand-50 hover:border-brand-300 transition">🤔 별로예요</button>
+                        </div>
+                        <p id="feedback-toast" class="text-[11px] text-brand-600 font-bold hidden">피드백이 내 입맛 데이터베이스에 저장되었습니다!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GROUP / MULTI-PLAYER MODE CONTAINER -->
+        <div id="group-mode-container" class="hidden">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 mb-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold mb-1">다인용 기능</span>
+                        <h2 class="text-xl font-bold text-gray-900">팀/친구 메뉴 조율기 🤝</h2>
+                        <p class="text-xs text-gray-500 mt-1">참여자의 개별 기호와 못 먹는 음식을 모아 최적의 타협점 메뉴를 도출합니다.</p>
+                    </div>
+                </div>
+
+                <!-- Add Participant Form -->
+                <div class="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100 mb-6">
+                    <h3 class="text-xs font-bold text-indigo-900 mb-3"><i class="fa-solid fa-user-plus mr-1"></i> 함께 먹는 인원 등록</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                        <input type="text" id="member-name" placeholder="이름 (예: 민수)" class="p-2.5 text-xs bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="text" id="member-craving" placeholder="원하는 스타일 (예: 매콤, 고기)" class="p-2.5 text-xs bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="text" id="member-dislike" placeholder="못먹는 음식 (예: 오이, 해산물)" class="p-2.5 text-xs bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <button onclick="addGroupMember()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition">
+                        멤버 등록하기
+                    </button>
+                </div>
+
+                <!-- Member List Display -->
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
+                        <span>현재 등록된 멤버 (<span id="member-count">0</span>명)</span>
+                        <button onclick="clearGroupMembers()" class="text-[11px] text-gray-400 hover:text-rose-500 underline">초기화</button>
+                    </h3>
+                    <div id="group-member-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <!-- Members appended dynamically -->
+                        <div class="text-center py-6 text-xs text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200 col-span-full">
+                            등록된 멤버가 없습니다. 함께 식사할 인원을 추가해보세요!
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Calculation Button -->
+                <button onclick="calculateGroupMenu()" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20 text-xs transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>모두가 만족하는 타협점 메뉴 도출</span>
+                </button>
+            </div>
+
+            <!-- Group Recommendation Results Card -->
+            <div id="group-results-card" class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hidden mb-6">
+                <h3 class="text-lg font-extrabold text-gray-900 mb-3 flex items-center space-x-2">
+                    <span>🎯 다인용 추천 결과</span>
+                </h3>
+                <div id="group-recommendation-list" class="space-y-3 mb-4">
+                    <!-- Dynamic Group Result Cards -->
+                </div>
+            </div>
+
+            <!-- GROUP ROULETTE MINI GAME -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 text-center">
+                <h3 class="text-base font-bold text-gray-900 mb-1">결정이 도저히 안 날 땐? 🎡</h3>
+                <p class="text-xs text-gray-500 mb-4">운명에 맡기는 최후의 메뉴 룰렛!</p>
+
+                <div class="relative w-48 h-48 mx-auto mb-4 flex items-center justify-center bg-gradient-to-tr from-brand-100 to-amber-100 rounded-full border-4 border-brand-400 shadow-inner overflow-hidden" id="roulette-wheel">
+                    <div id="roulette-text" class="text-xl font-black text-brand-700 px-4">
+                        룰렛 돌리기
+                    </div>
+                </div>
+
+                <button onclick="spinRoulette()" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl shadow-md transition">
+                    🎲 룰렛 돌리기!
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- HISTORY & ANALYTICS DRAWER / MODAL -->
+    <div id="history-drawer" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm hidden flex justify-end">
+        <div class="bg-white w-full max-w-md h-full shadow-2xl p-6 overflow-y-auto flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-brain text-brand-500 text-xl"></i>
+                        <h2 class="font-extrabold text-lg text-gray-900">내 입맛 프로필 & 학습 히스토리</h2>
+                    </div>
+                    <button onclick="toggleHistoryDrawer()" class="text-gray-400 hover:text-gray-600 text-xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-gray-500 mb-4">사용할수록 AI가 사용자님의 취향과 피드백을 축적하여 더 정밀한 메뉴를 제안합니다.</p>
+
+                <!-- Saved Preferences Summary -->
+                <div class="bg-brand-50/50 p-4 rounded-2xl border border-brand-100 mb-6">
+                    <h3 class="text-xs font-bold text-brand-800 mb-2">📊 내 선호도 통계</h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">자주 선택한 카테고리</span>
+                            <span id="stat-top-category" class="font-bold text-gray-800">한식 / 국물요리</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">평균 선호 예산대</span>
+                            <span id="stat-avg-budget" class="font-bold text-gray-800">1만 ~ 1.5만원</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">기피 키워드 데이터</span>
+                            <span id="stat-dislikes-count" class="font-bold text-rose-600">3개 설정됨</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Logs List -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-700 mb-2">최근 결정한 메뉴 히스토리</h3>
+                    <div id="history-list" class="space-y-2 text-xs">
+                        <!-- History Log Dynamic Items -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100 mt-6">
+                <button onclick="clearUserHistory()" class="w-full py-2.5 bg-gray-100 hover:bg-rose-50 text-gray-500 hover:text-rose-600 font-bold rounded-xl text-xs transition">
+                    입맛 데이터 및 히스토리 초기화
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div class="info-panel">
-        <p>조작: 마우스 이동 또는 키보드 방향키(←, →)</p>
-    </div>
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-100 py-4 text-center text-xs text-gray-400 mt-8">
+        <p>© 2026 오메추 한입만. Smart Meal Curation Service.</p>
+    </footer>
 
     <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const startBtn = document.getElementById("start-btn");
+        // DATASET: Extensive Food Database with features & criteria
+        const FOOD_DATABASE = [
+            { id: 1, name: '돼지김치찌개', category: '한식', tags: ['국물', '매콤', '든든', '밥'], budget: '10000', speed: 'normal', weather: ['rainy', 'cold'], calories: 'high', emoji: '🍲' },
+            { id: 2, name: '연어 포케 샐러드', category: '양식/건강식', tags: ['신선', '다이어트', '깔끔', '채소'], budget: '15000', speed: 'quick', weather: ['sunny', 'hot'], calories: 'low', emoji: '🥗' },
+            { id: 3, name: '수제 치즈버거 세트', category: '패스트푸드', tags: ['고기', '느끼', '단짠', '간편'], budget: '15000', speed: 'quick', weather: ['sunny'], calories: 'high', emoji: '🍔' },
+            { id: 4, name: '얼큰 차돌짬뽕', category: '중식', tags: ['국물', '매콤', '해장', '면'], budget: '15000', speed: 'normal', weather: ['rainy', 'cold'], calories: 'high', emoji: '🍜' },
+            { id: 5, name: '일식 안심 돈카츠', category: '일식', tags: ['바삭', '고기', '든든'], budget: '15000', speed: 'normal', weather: ['sunny'], calories: 'medium', emoji: '🍱' },
+            { id: 6, name: '마라탕 & 꿔바로우', category: '중식', tags: ['매콤', '자극적', '스트레스해소'], budget: '20000', speed: 'normal', weather: ['rainy', 'cold'], calories: 'high', emoji: '🥘' },
+            { id: 7, name: '신선한 모듬초밥', category: '일식', tags: ['깔끔', '신선', '고급', '해산물'], budget: '20000', speed: 'normal', weather: ['sunny'], calories: 'low', emoji: '🍣' },
+            { id: 8, name: '치즈 떡볶이 & 튀김', category: '분식', tags: ['매콤', '단짠', '간편', '추억'], budget: '10000', speed: 'quick', weather: ['rainy'], calories: 'medium', emoji: '🍢' },
+            { id: 9, name: '베트남 소고기 쌀국수', category: '아시안', tags: ['국물', '담백', '속편함'], budget: '15000', speed: 'quick', weather: ['cold', 'rainy'], calories: 'low', emoji: '🍜' },
+            { id: 10, name: '삼겹살 구이 & 냉면', category: '한식', tags: ['고기', '든든', '기름진', '회식'], budget: '20000', speed: 'relax', weather: ['cold', 'sunny'], calories: 'high', emoji: '🥩' },
+            { id: 11, name: '편의점 도시락 & 라면', category: '간편', tags: ['간편', '가성비', '초스피드'], budget: '10000', speed: 'quick', weather: ['rainy', 'hot'], calories: 'medium', emoji: '🍱' },
+            { id: 12, name: '시원한 김치말이국수', category: '한식', tags: ['시원', '새콤', '면', '여름'], budget: '10000', speed: 'quick', weather: ['hot'], calories: 'low', emoji: '🍜' },
+            { id: 13, name: '고단백 닭가슴살 볶음밥', category: '건강식', tags: ['다이어트', '담백', '밥'], budget: '10000', speed: 'quick', weather: ['sunny'], calories: 'low', emoji: '🍛' },
+            { id: 14, name: '매콤 크임 파스타', category: '양식', tags: ['느끼', '매콤', '분위기', '면'], budget: '20000', speed: 'relax', weather: ['sunny', 'cold'], calories: 'high', emoji: '🍝' },
+            { id: 15, name: '치맥 (후라이드 치킨 & 맥주)', category: '야식', tags: ['바삭', '안주', '스트레스해소', '고기'], budget: '20000', speed: 'relax', weather: ['hot', 'rainy'], calories: 'high', emoji: '🍗' }
+        ];
 
-        // 게임 상태 변수
-        let isGameRunning = false;
-        let score = 0;
-        let animationId;
+        const CRAVING_TAG_OPTIONS = [
+            '국물', '매콤', '고기', '신선', '담백', '느끼', '바삭', '시원', '면', '밥', '다이어트', '단짠'
+        ];
 
-        // 패들 설정 (두꺼운 선)
-        const paddleHeight = 15;
-        const paddleWidth = 100;
-        let paddleX = (canvas.width - paddleWidth) / 2;
-        let rightPressed = false;
-        let leftPressed = false;
+        const DISLIKE_TAG_OPTIONS = [
+            '해산물', '오이', '향신료', '돼지고기', '밀가루', '날것(회)'
+        ];
 
-        // 구슬 배열 및 클래스
-        let balls = [];
-        class Ball {
-            constructor(x, y, dx, dy) {
-                this.x = x;
-                this.y = y;
-                this.dx = dx;
-                this.dy = dy;
-                this.radius = 8;
-                this.color = "#4ecca3";
+        // APP STATE MANAGEMENT
+        let currentState = {
+            currentStep: 1,
+            mode: 'personal', // 'personal' or 'group'
+            timing: 'lunch',
+            hunger: 3,
+            speed: 'normal',
+            budget: '15000',
+            mealType: 'dining',
+            weather: 'sunny',
+            cravings: [],
+            dislikes: [],
+            recentMeals: '',
+            selectedDish: null
+        };
+
+        let groupMembers = [];
+
+        // INITIALIZATION
+        window.onload = function() {
+            renderCravingTags();
+            renderDislikeTags();
+            loadUserHistory();
+        };
+
+        function switchMode(mode) {
+            currentState.mode = mode;
+            const personalBtn = document.getElementById('mode-personal-btn');
+            const groupBtn = document.getElementById('mode-group-btn');
+            const personalContainer = document.getElementById('personal-mode-container');
+            const groupContainer = document.getElementById('group-mode-container');
+
+            if (mode === 'personal') {
+                personalBtn.className = 'flex-1 py-2 rounded-lg text-center transition bg-white text-brand-600 shadow-sm flex items-center justify-center space-x-1 font-bold';
+                groupBtn.className = 'flex-1 py-2 rounded-lg text-center transition hover:text-gray-800 flex items-center justify-center space-x-1 font-bold text-gray-500';
+                personalContainer.classList.remove('hidden');
+                groupContainer.classList.add('hidden');
+            } else {
+                groupBtn.className = 'flex-1 py-2 rounded-lg text-center transition bg-white text-indigo-600 shadow-sm flex items-center justify-center space-x-1 font-bold';
+                personalBtn.className = 'flex-1 py-2 rounded-lg text-center transition hover:text-gray-800 flex items-center justify-center space-x-1 font-bold text-gray-500';
+                groupContainer.classList.remove('hidden');
+                personalContainer.classList.add('hidden');
             }
+        }
 
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.closePath();
+        function goToStep(stepNumber) {
+            // Hide all steps
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`step-${i}`);
+                if (el) el.classList.add('hidden');
             }
+            // Show target step
+            document.getElementById(`step-${stepNumber}`).classList.remove('hidden');
 
-            update() {
-                // 좌우 벽 충돌
-                if (this.x + this.dx > canvas.width - this.radius || this.x + this.dx < this.radius) {
-                    this.dx = -this.dx;
+            // Update Stepper Progress
+            currentState.currentStep = stepNumber;
+            const progressBar = document.getElementById('step-progress-bar');
+            progressBar.style.width = `${(stepNumber / 5) * 100}%`;
+
+            for (let i = 1; i <= 5; i++) {
+                const label = document.getElementById(`step-label-${i}`);
+                if (i <= stepNumber) {
+                    label.className = 'text-brand-500 font-bold';
+                } else {
+                    label.className = 'text-gray-400';
                 }
-                // 천장 충돌
-                if (this.y + this.dy < this.radius) {
-                    this.dy = -this.dy;
-                }
-                // 패들 충돌
-                else if (this.y + this.dy > canvas.height - paddleHeight - this.radius) {
-                    if (this.x > paddleX && this.x < paddleX + paddleWidth) {
-                        // 패들 부딪히는 위치에 따른 각도 조절
-                        let hitPoint = (this.x - (paddleX + paddleWidth / 2)) / (paddleWidth / 2);
-                        this.dx = hitPoint * 5;
-                        this.dy = -Math.abs(this.dy);
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetToStep(stepNumber) {
+            document.getElementById('action-section').classList.add('hidden');
+            goToStep(stepNumber);
+        }
+
+        // STEP 1 INPUT HANDLERS
+        function selectTiming(val, btnEl) {
+            currentState.timing = val;
+            document.querySelectorAll('.timing-chip').forEach(el => {
+                el.className = 'timing-chip border border-gray-200 rounded-2xl p-3 text-left hover:border-brand-300 transition';
+            });
+            btnEl.className = 'timing-chip border border-brand-500 bg-brand-50 text-brand-600 rounded-2xl p-3 text-left transition font-bold';
+        }
+
+        function updateHungerDisplay(val) {
+            currentState.hunger = parseInt(val);
+            const textEl = document.getElementById('hunger-display-text');
+            const descriptions = [
+                "1단계 : 속 편함 (가벼운 주전부리 가능)",
+                "2단계 : 입이 심심함 (디저트나 가벼운 식사)",
+                "3단계 : 출출해요 (딱 적당한 표준 식사!)",
+                "4단계 : 배고파요 (든든하고 양 많은 음식)",
+                "5단계 : 꼬르륵 픽어살! (고칼로리 대용량 필수)"
+            ];
+            textEl.innerText = descriptions[val - 1];
+        }
+
+        function selectSpeed(val, btnEl) {
+            currentState.speed = val;
+            document.querySelectorAll('.speed-chip').forEach(el => {
+                el.className = 'speed-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 font-medium text-gray-700';
+            });
+            btnEl.className = 'speed-chip p-3 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold';
+        }
+
+        // STEP 2 INPUT HANDLERS
+        function selectBudget(val, btnEl) {
+            currentState.budget = val;
+            document.querySelectorAll('.budget-chip').forEach(el => {
+                el.className = 'budget-chip p-3 rounded-2xl border border-gray-200 hover:border-brand-300 text-left';
+            });
+            btnEl.className = 'budget-chip p-3 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold text-left';
+        }
+
+        function selectMealType(val, btnEl) {
+            currentState.mealType = val;
+            document.querySelectorAll('.type-chip').forEach(el => {
+                el.className = 'type-chip p-4 rounded-2xl border border-gray-200 hover:border-brand-300 text-center text-gray-700';
+            });
+            btnEl.className = 'type-chip p-4 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold text-center';
+        }
+
+        // STEP 3 INPUT HANDLERS
+        function selectWeather(val, btnEl) {
+            currentState.weather = val;
+            document.querySelectorAll('.weather-chip').forEach(el => {
+                el.className = 'weather-chip p-2.5 rounded-2xl border border-gray-200 hover:border-brand-300 text-center text-gray-700';
+            });
+            btnEl.className = 'weather-chip p-2.5 rounded-2xl border border-brand-500 bg-brand-50 text-brand-600 font-bold text-center';
+        }
+
+        function renderCravingTags() {
+            const container = document.getElementById('craving-tags-container');
+            container.innerHTML = CRAVING_TAG_OPTIONS.map(tag => `
+                <button type="button" onclick="toggleCravingTag('${tag}', this)" class="px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:border-brand-300 transition">
+                    # ${tag}
+                </button>
+            `).join('');
+        }
+
+        function toggleCravingTag(tag, btnEl) {
+            const idx = currentState.cravings.indexOf(tag);
+            if (idx > -1) {
+                currentState.cravings.splice(idx, 1);
+                btnEl.classList.remove('chip-selected');
+            } else {
+                currentState.cravings.push(tag);
+                btnEl.classList.add('chip-selected');
+            }
+        }
+
+        function renderDislikeTags() {
+            const container = document.getElementById('dislike-tags-container');
+            container.innerHTML = DISLIKE_TAG_OPTIONS.map(tag => `
+                <button type="button" onclick="toggleDislikeTag('${tag}', this)" class="px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:border-rose-300 transition">
+                    🚫 ${tag}
+                </button>
+            `).join('');
+        }
+
+        function toggleDislikeTag(tag, btnEl) {
+            const idx = currentState.dislikes.indexOf(tag);
+            if (idx > -1) {
+                currentState.dislikes.splice(idx, 1);
+                btnEl.classList.remove('bg-rose-500', 'text-white', 'border-rose-600');
+            } else {
+                currentState.dislikes.push(tag);
+                btnEl.classList.add('bg-rose-500', 'text-white', 'border-rose-600');
+            }
+        }
+
+        function startAiAnalysis() {
+            // Retrieve recent meals & custom dislikes
+            currentState.recentMeals = document.getElementById('recent-meals-input').value;
+            const customDislikes = document.getElementById('dislike-custom-input').value;
+            if (customDislikes) {
+                customDislikes.split(',').forEach(item => {
+                    const trimmed = item.trim();
+                    if (trimmed && !currentState.dislikes.includes(trimmed)) {
+                        currentState.dislikes.push(trimmed);
                     }
-                }
-
-                this.x += this.dx;
-                this.y += this.dy;
-            }
-        }
-
-        // 벽돌 설정
-        const brickRowCount = 4;
-        const brickColumnCount = 7;
-        const brickWidth = 72;
-        const brickHeight = 20;
-        const brickPadding = 10;
-        const brickOffsetTop = 40;
-        const brickOffsetLeft = 18;
-        let bricks = [];
-        let brickDropSpeed = 0.15; // 벽돌 내려오는 속도
-        let lastRowSpawnTime = 0;
-
-        function initBricks() {
-            bricks = [];
-            for (let r = 0; r < brickRowCount; r++) {
-                for (let c = 0; c < brickColumnCount; c++) {
-                    bricks.push({
-                        x: c * (brickWidth + brickPadding) + brickOffsetLeft,
-                        y: r * (brickHeight + brickPadding) + brickOffsetTop,
-                        status: 1,
-                        color: `hsl(${r * 40 + 10}, 70%, 60%)`
-                    });
-                }
-            }
-        }
-
-        // 아이템 클래스
-        let items = [];
-        class Item {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.radius = 10;
-                this.dy = 2; // 떨어지는 속도
-            }
-
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = "#ff2e63";
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#ffffff";
-                ctx.stroke();
-                ctx.closePath();
-
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 12px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText("+", this.x, this.y);
-            }
-
-            update() {
-                this.y += this.dy;
-            }
-        }
-
-        // 이벤트 리스너
-        document.addEventListener("keydown", keyDownHandler);
-        document.addEventListener("keyup", keyUpHandler);
-        document.addEventListener("mousemove", mouseMoveHandler);
-
-        function keyDownHandler(e) {
-            if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
-            else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
-        }
-
-        function keyUpHandler(e) {
-            if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
-            else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
-        }
-
-        function mouseMoveHandler(e) {
-            const relativeX = e.clientX - canvas.offsetLeft;
-            if (relativeX > 0 && relativeX < canvas.width) {
-                paddleX = relativeX - paddleWidth / 2;
-            }
-        }
-
-        // 충돌 감지
-        function collisionDetection() {
-            for (let i = 0; i < balls.length; i++) {
-                let b = balls[i];
-                for (let j = 0; j < bricks.length; j++) {
-                    let br = bricks[j];
-                    if (br.status === 1) {
-                        if (
-                            b.x > br.x &&
-                            b.x < br.x + brickWidth &&
-                            b.y > br.y &&
-                            b.y < br.y + brickHeight
-                        ) {
-                            b.dy = -b.dy;
-                            br.status = 0;
-                            score += 10;
-
-                            // 25% 확률로 구슬 추가 아이템 생성
-                            if (Math.random() < 0.25) {
-                                items.push(new Item(br.x + brickWidth / 2, br.y + brickHeight));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 새 벽돌 줄 생성
-        function spawnNewBrickRow() {
-            for (let i = 0; i < bricks.length; i++) {
-                bricks[i].y += brickHeight + brickPadding;
-            }
-            for (let c = 0; c < brickColumnCount; c++) {
-                bricks.push({
-                    x: c * (brickWidth + brickPadding) + brickOffsetLeft,
-                    y: brickOffsetTop,
-                    status: 1,
-                    color: `hsl(${Math.random() * 360}, 70%, 60%)`
                 });
             }
+
+            goToStep(4);
+
+            // Dynamic Summary Text
+            document.getElementById('summary-timing-text').innerText = `${currentState.timing.toUpperCase()} (포만감: ${currentState.hunger}단계)`;
+            document.getElementById('summary-budget-text').innerText = `${currentState.budget === 'free' ? '제한없음' : currentState.budget + '원 이하'} / ${currentState.mealType}`;
+            document.getElementById('summary-craving-text').innerText = currentState.cravings.length > 0 ? currentState.cravings.join(', ') : '없음 (알고리즘 자동)';
+
+            // Simulate Deep Learning Progress
+            const statusText = document.getElementById('ai-status-text');
+            const progressBar = document.getElementById('ai-progress-inner');
+            const messages = [
+                "사용자의 포만감 & 수라 시간대 가중치 부여 중...",
+                "날씨 데이터 및 기후 선호 알고리즘 교차 검증...",
+                "최근 입력된 기피 메뉴 필터링 처리 중...",
+                "최적의 TOP 3 영양/맛 메뉴 큐레이션 완료!"
+            ];
+
+            let step = 0;
+            const interval = setInterval(() => {
+                step++;
+                progressBar.style.width = `${step * 25}%`;
+                if (step <= messages.length) {
+                    statusText.innerText = messages[step - 1];
+                }
+                if (step >= 4) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        generateRecommendations();
+                        goToStep(5);
+                    }, 400);
+                }
+            }, 500);
         }
 
-        // 패들 그리기
-        function drawPaddle() {
-            ctx.beginPath();
-            ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
-            ctx.fillStyle = "#22d1ee";
-            ctx.fill();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "#22d1ee";
-            ctx.closePath();
-            ctx.shadowBlur = 0;
-        }
+        function generateRecommendations() {
+            // Scoring algorithm
+            let scoredList = FOOD_DATABASE.map(food => {
+                let score = 70; // Base match score
 
-        // 벽돌 그리기
-        function drawBricks() {
-            for (let i = 0; i < bricks.length; i++) {
-                let b = bricks[i];
-                if (b.status === 1) {
-                    ctx.beginPath();
-                    ctx.rect(b.x, b.y, brickWidth, brickHeight);
-                    ctx.fillStyle = b.color;
-                    ctx.fill();
-                    ctx.closePath();
+                // Dislike & Recent Check (Hard filter)
+                let isDisliked = currentState.dislikes.some(d => food.name.includes(d) || food.tags.includes(d));
+                let isRecent = currentState.recentMeals.includes(food.name);
+                if (isDisliked || isRecent) {
+                    score -= 50;
+                }
 
-                    b.y += brickDropSpeed; // 서서히 내려옴
+                // Craving Tag Matches
+                const matchedCravings = food.tags.filter(t => currentState.cravings.includes(t));
+                score += matchedCravings.length * 10;
 
-                    // 벽돌이 패들 위치까지 내려오면 게임 오버
-                    if (b.y + brickHeight >= canvas.height - paddleHeight) {
-                        gameOver("벽돌이 바닥에 닿았습니다!");
-                        return;
+                // Weather fit
+                if (food.weather.includes(currentState.weather)) {
+                    score += 8;
+                }
+
+                // Budget Fit
+                if (currentState.budget !== 'free') {
+                    if (parseInt(food.budget) <= parseInt(currentState.budget)) {
+                        score += 7;
                     }
                 }
-            }
+
+                // Hunger Fit
+                if (currentState.hunger >= 4 && food.calories === 'high') score += 5;
+                if (currentState.hunger <= 2 && food.calories === 'low') score += 5;
+
+                // Random jitter for dynamic variety
+                score += Math.floor(Math.random() * 5);
+
+                return { ...food, score: Math.min(score, 99) };
+            });
+
+            // Sort by highest score
+            scoredList.sort((a, b) => b.score - a.score);
+            const topResults = scoredList.slice(0, 3);
+
+            // Render Results HTML
+            const container = document.getElementById('recommendation-list');
+            container.innerHTML = topResults.map((dish, idx) => `
+                <div onclick="selectFinalDish(${dish.id})" class="dish-card border ${idx === 0 ? 'border-brand-400 bg-gradient-to-r from-brand-50/50 to-amber-50/30' : 'border-gray-200 hover:border-brand-300 bg-white'} rounded-2xl p-4 cursor-pointer transition flex items-center justify-between">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-gray-100">
+                            ${dish.emoji}
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                ${idx === 0 ? '<span class="bg-brand-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded">강력추천 TOP 1</span>' : ''}
+                                <span class="text-xs text-gray-400 font-medium">${dish.category}</span>
+                            </div>
+                            <h4 class="font-bold text-gray-900 text-base">${dish.name}</h4>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                ${dish.tags.map(t => `<span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-md">#${t}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-black text-brand-600">${dish.score}%</div>
+                        <div class="text-[10px] text-gray-400">매칭률</div>
+                        <button class="mt-2 px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm">
+                            선택하기
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Auto select top 1
+            selectFinalDish(topResults[0].id);
         }
 
-        // 점수 및 잔여 구슬 UI
-        function drawUI() {
-            ctx.font = "16px Arial";
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(`점수: ${score}`, 15, 25);
-            ctx.fillText(`남은 구슬: ${balls.length}개`, canvas.width - 120, 25);
+        function selectFinalDish(dishId) {
+            const dish = FOOD_DATABASE.find(d => d.id === dishId);
+            if (!dish) return;
+
+            currentState.selectedDish = dish;
+
+            document.getElementById('selected-dish-emoji').innerText = dish.emoji;
+            document.getElementById('selected-dish-title').innerText = dish.name;
+            document.getElementById('selected-dish-tag').innerText = `매칭 ${dish.score || 95}%`;
+
+            // Setup Search URLs (Naver, Kakao, Delivery apps)
+            const encodedQuery = encodeURIComponent(dish.name);
+            document.getElementById('link-naver-map').href = `https://map.naver.com/v5/search/${encodedQuery}`;
+            document.getElementById('link-kakao-map').href = `https://map.kakao.com/?q=${encodedQuery}`;
+            
+            // Delivery search deep-link proxies
+            document.getElementById('link-baemin').href = `https://m.baemin.com/`;
+            document.getElementById('link-yogiyo').href = `https://www.yogiyo.co.kr/`;
+            document.getElementById('link-coupang').href = `https://eats.coupang.com/`;
+
+            document.getElementById('action-section').classList.remove('hidden');
         }
 
-        // 게임 오버
-        function gameOver(message) {
-            isGameRunning = false;
-            cancelAnimationFrame(animationId);
-            alert(`게임 오버!\n${message}\n최종 점수: ${score}`);
-            startBtn.style.display = "block";
-            startBtn.innerText = "다시 시작";
+        function saveFeedback(rating) {
+            const toast = document.getElementById('feedback-toast');
+            toast.classList.remove('hidden');
+
+            // Save history log into LocalStorage
+            let history = JSON.parse(localStorage.getItem('omc_history') || '[]');
+            if (currentState.selectedDish) {
+                history.unshift({
+                    dish: currentState.selectedDish.name,
+                    category: currentState.selectedDish.category,
+                    date: new Date().toLocaleDateString('ko-KR'),
+                    rating: rating
+                });
+                localStorage.setItem('omc_history', JSON.stringify(history.slice(0, 15)));
+                loadUserHistory();
+            }
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
         }
 
-        // 게임 루프
-        function update(timestamp) {
-            if (!isGameRunning) return;
+        function addGroupMember() {
+            const name = document.getElementById('member-name').value.trim();
+            const craving = document.getElementById('member-craving').value.trim();
+            const dislike = document.getElementById('member-dislike').value.trim();
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 패들 이동
-            if (rightPressed && paddleX < canvas.width - paddleWidth) {
-                paddleX += 7;
-            } else if (leftPressed && paddleX > 0) {
-                paddleX -= 7;
-            }
-
-            // 12초마다 새 벽돌 줄 생성
-            if (!lastRowSpawnTime) lastRowSpawnTime = timestamp;
-            if (timestamp - lastRowSpawnTime > 12000) {
-                spawnNewBrickRow();
-                lastRowSpawnTime = timestamp;
-            }
-
-            drawPaddle();
-            drawBricks();
-            collisionDetection();
-            drawUI();
-
-            // 구슬 처리
-            for (let i = balls.length - 1; i >= 0; i--) {
-                let ball = balls[i];
-                ball.draw();
-                ball.update();
-
-                // 바닥으로 넘어가면 깨져서 없어짐
-                if (ball.y - ball.radius > canvas.height) {
-                    balls.splice(i, 1);
-                }
-            }
-
-            // 구슬이 없으면 게임 오버
-            if (balls.length === 0) {
-                gameOver("모든 구슬을 잃었습니다!");
+            if (!name) {
+                alert('참여자 이름을 입력해주세요.');
                 return;
             }
 
-            // 아이템 처리
-            for (let i = items.length - 1; i >= 0; i--) {
-                let item = items[i];
-                item.draw();
-                item.update();
+            groupMembers.push({ name, craving, dislike });
 
-                // 패들로 아이템을 획득했을 때
-                if (
-                    item.y + item.radius >= canvas.height - paddleHeight &&
-                    item.x > paddleX &&
-                    item.x < paddleX + paddleWidth
-                ) {
-                    // 구슬 2개 추가
-                    balls.push(new Ball(paddleX + paddleWidth / 2, canvas.height - paddleHeight - 10, (Math.random() - 0.5) * 6, -4));
-                    balls.push(new Ball(paddleX + paddleWidth / 2, canvas.height - paddleHeight - 10, (Math.random() - 0.5) * 6, -5));
-                    items.splice(i, 1);
-                } else if (item.y > canvas.height) {
-                    items.splice(i, 1);
-                }
+            // Clear inputs
+            document.getElementById('member-name').value = '';
+            document.getElementById('member-craving').value = '';
+            document.getElementById('member-dislike').value = '';
+
+            renderGroupMembers();
+        }
+
+        function clearGroupMembers() {
+            groupMembers = [];
+            renderGroupMembers();
+            document.getElementById('group-results-card').classList.add('hidden');
+        }
+
+        function renderGroupMembers() {
+            document.getElementById('member-count').innerText = groupMembers.length;
+            const container = document.getElementById('group-member-list');
+
+            if (groupMembers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-6 text-xs text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200 col-span-full">
+                        등록된 멤버가 없습니다. 함께 식사할 인원을 추가해보세요!
+                    </div>
+                `;
+                return;
             }
 
-            animationId = requestAnimationFrame(update);
+            container.innerHTML = groupMembers.map((m, idx) => `
+                <div class="bg-gray-50 border border-gray-100 p-3 rounded-2xl flex items-center justify-between text-xs">
+                    <div>
+                        <div class="font-bold text-gray-800">${m.name}</div>
+                        <div class="text-[11px] text-gray-500">
+                            ${m.craving ? `💚 희망: ${m.craving}` : ''} 
+                            ${m.dislike ? `<span class="text-rose-500 font-medium">🚫 기피: ${m.dislike}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="removeMember(${idx})" class="text-gray-400 hover:text-rose-500 p-1">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
         }
 
-        // 게임 시작
-        function startGame() {
-            score = 0;
-            balls = [];
-            items = [];
-            lastRowSpawnTime = 0;
-            paddleX = (canvas.width - paddleWidth) / 2;
-
-            balls.push(new Ball(canvas.width / 2, canvas.height - 30, 4, -4));
-            initBricks();
-
-            startBtn.style.display = "none";
-            isGameRunning = true;
-
-            requestAnimationFrame(update);
+        function removeMember(idx) {
+            groupMembers.splice(idx, 1);
+            renderGroupMembers();
         }
 
-        startBtn.addEventListener("click", startGame);
+        function calculateGroupMenu() {
+            if (groupMembers.length === 0) {
+                alert('최소 1명 이상의 멤버를 추가해주세요.');
+                return;
+            }
+
+            // Group calculation logic
+            let scoredList = FOOD_DATABASE.map(food => {
+                let score = 75;
+
+                groupMembers.forEach(m => {
+                    // Penalty if member dislikes
+                    if (m.dislike && (food.name.includes(m.dislike) || food.tags.includes(m.dislike))) {
+                        score -= 40;
+                    }
+                    // Bonus if matches member craving
+                    if (m.craving && (food.name.includes(m.craving) || food.tags.includes(m.craving))) {
+                        score += 15;
+                    }
+                });
+
+                return { ...food, score: Math.max(score, 40) };
+            });
+
+            scoredList.sort((a, b) => b.score - a.score);
+            const topResults = scoredList.slice(0, 3);
+
+            const card = document.getElementById('group-results-card');
+            const list = document.getElementById('group-recommendation-list');
+
+            list.innerHTML = topResults.map((dish, i) => `
+                <div class="p-3 border border-indigo-100 bg-indigo-50/40 rounded-2xl flex items-center justify-between text-xs">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${dish.emoji}</span>
+                        <div>
+                            <span class="font-extrabold text-indigo-900">${dish.name}</span>
+                            <span class="text-[10px] text-gray-400 ml-1">(${dish.category})</span>
+                            <p class="text-[10px] text-indigo-600 mt-0.5">모두의 만족도 타협점 최상위</p>
+                        </div>
+                    </div>
+                    <span class="font-black text-indigo-600 bg-white px-2 py-1 rounded-lg shadow-sm border border-indigo-100">
+                        ${dish.score}점
+                    </span>
+                </div>
+            `).join('');
+
+            card.classList.remove('hidden');
+        }
+
+        function spinRoulette() {
+            const wheel = document.getElementById('roulette-wheel');
+            const text = document.getElementById('roulette-text');
+
+            let count = 0;
+            const interval = setInterval(() => {
+                const randomDish = FOOD_DATABASE[Math.floor(Math.random() * FOOD_DATABASE.length)];
+                text.innerText = `${randomDish.emoji} ${randomDish.name}`;
+                count++;
+
+                if (count > 20) {
+                    clearInterval(interval);
+                    text.innerHTML = `<span class="text-xs text-brand-500 font-bold">당첨!</span><br/>${text.innerText}`;
+                }
+            }, 80);
+        }
+
+        function toggleHistoryDrawer() {
+            const drawer = document.getElementById('history-drawer');
+            drawer.classList.toggle('hidden');
+        }
+
+        function loadUserHistory() {
+            const history = JSON.parse(localStorage.getItem('omc_history') || '[]');
+            const listContainer = document.getElementById('history-list');
+
+            if (history.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-400 text-center py-4">저장된 입맛 기록이 없습니다.</p>';
+                return;
+            }
+
+            listContainer.innerHTML = history.map(item => `
+                <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
+                    <div>
+                        <span class="font-bold text-gray-800">${item.dish}</span>
+                        <span class="text-[10px] text-gray-400 ml-1">${item.date}</span>
+                    </div>
+                    <span class="text-xs text-brand-500">${'⭐'.repeat(item.rating === 5 ? 3 : item.rating === 3 ? 2 : 1)}</span>
+                </div>
+            `).join('');
+        }
+
+        function clearUserHistory() {
+            if (confirm('모든 입맛 학습 데이터 및 히스토리를 초기화하시겠습니까?')) {
+                localStorage.removeItem('omc_history');
+                loadUserHistory();
+                alert('초기화되었습니다.');
+            }
+        }
     </script>
 </body>
 </html>
